@@ -1,0 +1,45 @@
+# Local variant of sonic-swss-common/build-env/Dockerfile: same setup steps,
+# but upstream bundles are injected via --upstream-staged-dir (pre-downloaded
+# with resumable curl) because in-docker downloads from the Azure artifact CDN
+# time out from this network. Keep in sync with the repo Dockerfile; the only
+# intentional diffs are COPY staged/ + the staged flags + the build user.
+ARG DEBIAN=bookworm
+ARG BRANCH=master
+FROM sonicdev-microsoft.azurecr.io:443/sonic-slave-${DEBIAN}:${BRANCH}
+
+ARG USER
+ARG UID
+ARG GID
+ARG HOME
+ARG DEBIAN
+ARG BRANCH
+
+RUN groupadd --gid "${GID}" "${USER}" \
+ && useradd --gid "${GID}" --uid "${UID}" --create-home --home-dir "${HOME}" --shell /bin/bash "${USER}" \
+ && usermod --append --groups sudo "${USER}" \
+ && echo "${USER} ALL=(ALL) NOPASSWD:ALL" > "/etc/sudoers.d/${USER}" \
+ && chmod 0440 "/etc/sudoers.d/${USER}"
+
+# The buildenv_setup tool lives in sonic-swss-common's own ci/ dir — copy the
+# declarations + tool only (never the source; the tree is bind-mounted later).
+COPY ci/ /opt/buildenv/ci/
+COPY build-env/ /workspace/build-env/
+COPY staged/ /staged/
+
+RUN apt-get update \
+ && apt-get install -y python3-yaml python3-requests sudo \
+ && PYTHONPATH=/opt/buildenv/ci python3 -m buildenv_setup \
+      --repo-dir /workspace \
+      --scope build \
+      --arch amd64 \
+      --debian-version "${DEBIAN}" \
+      --branch "${BRANCH}" \
+      --org-url https://dev.azure.com/mssonic \
+      --no-sudo \
+      --upstream-staged-dir /staged \
+      --required-staged-upstream common-libs \
+      --required-staged-upstream sonic-buildimage-vs
+
+USER ${USER}
+WORKDIR /workspace
+CMD ["sleep", "infinity"]

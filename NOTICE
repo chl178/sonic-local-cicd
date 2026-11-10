@@ -1,0 +1,42 @@
+NOTICE — release image bundles provenance
+=========================================
+
+The archives attached to this repository's releases are convenience
+redistributions of *unmodified* build artifacts, produced with
+`tools/export-images.sh` (`docker save` / `split` — nothing repackaged,
+rebased or modified inside the images).
+
+They are derived from the following upstream works. Each remains under its
+own license; nothing here changes those terms. If in doubt, obtain the
+originals from the official sources listed below.
+
+1. Container images (ci-images, vrnetlab-sonic-vs bundles)
+   - Base: `sonicdev-microsoft.azurecr.io/sonic-slave-bookworm`, built by
+     https://github.com/sonic-net/sonic-buildimage (Apache License 2.0).
+     The base image contains Debian GNU/Linux packages (each under its own
+     license, per Debian) and other build tooling installed by the SONiC
+     build system (including the Microsoft .NET SDK, distributed under its
+     own terms).
+   - Locally built layers on top of that base: `swss-bookworm-master`,
+     `swsscommon-bookworm`, `sonic-ci-py3:base` — install the upstream
+     CI dependency set (debs from sonic-net/sonic-swss-common,
+     sonic-sairedis, sonic-buildimage common-libs; SONiC python wheels,
+     Apache-2.0) into the base image. Dockerfiles are in `cicd/`.
+   - `vrnetlab/sonic_sonic-vs` wraps the official SONiC VS image with
+     vrnetlab (https://github.com/vrnetlab/vrnetlab) for container use.
+   - Official pull source for the base image:
+     `docker pull sonicdev-microsoft.azurecr.io:443/sonic-slave-bookworm:master-amd64`
+
+2. SONiC VS nightly archive (sonic-vs.img.gz parts)
+   - The official, unmodified SONiC master nightly `sonic-vs.img.gz`
+     published by the SONiC build system
+     (https://github.com/sonic-net/SONiC, Apache License 2.0; image contents
+     under their respective licenses). Split as-is for the 2 GiB release
+     asset limit; `cat` the parts to recover the identical gzip file.
+   - Official download source:
+     https://sonic-net.github.io/SONiC/sonic_latest_images.html
+     (also automated by `vs/download-vs.sh`).
+
+No SONiC trademarks or logos are claimed; "SONiC" is a project of the
+SONiC community / Linux Foundation. This repository and its images are
+personal tooling, not an official sonic-net distribution.

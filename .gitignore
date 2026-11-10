@@ -1,0 +1,15 @@
+# runtime droppings of the vs/ lab scripts
+console.log
+links.json.tmp
+*.img
+*.img.gz
+*.img.part
+qemu-*.sock
+qemu.pid
+payload/
+last-vs-*.md
+last-vs-*.txt
+download.log
+
+__pycache__/
+*.pyc
