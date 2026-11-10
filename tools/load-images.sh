@@ -21,24 +21,26 @@ trap 'rm -rf "$TMP"' EXIT
 gh release download "$TAG" -R "$REPO" --pattern SHA256SUMS --dir "$TMP"
 
 restore() {  # restore <bundle-name>
-  local b="$1"
-  echo "== [$b] downloading parts"
-  gh release download "$TAG" -R "$REPO" --pattern "$b.part-*" --dir "$TMP"
-  ( cd "$TMP" && sha256sum -c --ignore-missing <(grep " $b.part-" SHA256SUMS) )
-
+  local b="$1" prefix
+  # release asset names: <bundle>.tar.zst.part-NN (docker) or sonic-vs.img.gz.part-NN
   case "$b" in
-    sonic-vs.img.gz)
-      cat "$TMP/$b.part-"* > "$TMP/$b"
-      gzip -t "$TMP/$b"
-      mv "$TMP/$b" ./
-      echo "restored ./$b — unpack with: gunzip -c $b > sonic-vs.img (QEMU image)"
-      ;;
-    *.tar.zst)
-      cat "$TMP/$b.part-"* | zstd -d | docker load
-      ;;
-    *) echo "unknown bundle $b" >&2; exit 1 ;;
+    sonic-vs.img.gz) prefix="$b.part-" ;;
+    *)               prefix="$b.tar.zst.part-" ;;
   esac
-  rm -f "$TMP/$b.part-"*
+
+  echo "== [$b] downloading parts"
+  gh release download "$TAG" -R "$REPO" --pattern "$prefix*" --dir "$TMP"
+  ( cd "$TMP" && grep -F "$prefix" SHA256SUMS | sha256sum -c --ignore-missing )
+
+  if [ "$b" = "sonic-vs.img.gz" ]; then
+    cat "$TMP/$prefix"* > "$TMP/$b"
+    gzip -t "$TMP/$b"
+    mv "$TMP/$b" ./
+    echo "restored ./$b — unpack with: gunzip -c $b > sonic-vs.img (QEMU image)"
+  else
+    cat "$TMP/$prefix"* | zstd -d | docker load
+  fi
+  rm -f "$TMP/$prefix"*
 }
 
 if [ $# -gt 0 ]; then
